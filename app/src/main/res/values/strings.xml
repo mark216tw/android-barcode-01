@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">簡單條碼</string>
+    <string name="widget_description">快速顯示常用條碼</string>
+    <string name="widget_empty">請選擇條碼</string>
+    <string name="widget_preview_name">會員卡</string>
+</resources>

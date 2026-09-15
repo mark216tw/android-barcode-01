@@ -3,7 +3,7 @@
 「簡單條碼」是一款以快速、離線及容易操作為目標的 Android 一維條碼工具。使用者可以建立及管理常用條碼，或將條碼放到桌面小工具，需要出示會員卡、產品碼或門禁條碼時即可快速開啟。
 
 > [!WARNING]
-> GitHub Release 提供的是 **Debug 預發行版本**，僅供功能測試及體驗，不是正式發布版本。Debug APK 使用開發用簽章，不建議用於正式環境或長期保存重要資料。
+> GitHub Release 提供的是 **Pre-release 測試版本**，僅供功能測試及體驗，不是正式發布版本。APK 已啟用 R8 壓縮，但使用 Debug 金鑰簽署，不建議用於正式環境或長期保存重要資料。
 
 ## 主要功能
 
@@ -13,7 +13,7 @@
 - 將條碼分享為 PNG 圖片
 - 支援可調整大小的 `1 x N` Android 桌面小工具
 - 每個桌面小工具可選擇不同條碼
-- 六種活潑主題色，點選後立即套用
+- 六種活潑主題色與自訂 Hue 彩色滑桿，調整後立即套用
 - 支援跟隨系統、淺色及深色模式
 - 狀態列及系統導覽列會配合介面明暗調整
 - 全程離線，不要求相機及網路權限
@@ -30,11 +30,11 @@
 | ITF | 偶數位數字 |
 | Codabar | 數字、特定符號及起訖字元 |
 
-## 安裝 Debug APK
+## 安裝 Pre-release APK
 
 1. 前往本專案的 [Releases](../../releases) 頁面。
-2. 開啟標示為 `Pre-release` 及 `Debug` 的版本。
-3. 下載名稱包含 `debug` 的 APK。
+2. 開啟標示為 `Pre-release` 的版本。
+3. 下載 `app-prerelease.apk`。
 4. 在 Android 裝置允許瀏覽器或檔案管理器安裝未知來源應用程式。
 5. 開啟 APK 完成安裝。
 
@@ -72,6 +72,16 @@ Debug APK 產生於：
 
 ```text
 app/build/outputs/apk/debug/app-debug.apk
+```
+
+使用 R8 壓縮及 Debug 金鑰簽署的 Pre-release APK：
+
+```powershell
+.\gradlew.bat assemblePrerelease
+```
+
+```text
+app/build/outputs/apk/prerelease/app-prerelease.apk
 ```
 
 更多架構及發布資訊請參閱[開發文件](docs/開發文件.md)。

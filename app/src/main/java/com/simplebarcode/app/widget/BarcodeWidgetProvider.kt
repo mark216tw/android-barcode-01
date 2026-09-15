@@ -12,7 +12,6 @@ import com.simplebarcode.app.MainActivity
 import com.simplebarcode.app.R
 import com.simplebarcode.app.barcode.BarcodeGenerator
 import com.simplebarcode.app.data.BarcodeRepository
-import com.simplebarcode.app.data.SettingsRepository
 import kotlin.math.roundToInt
 
 class BarcodeWidgetProvider : AppWidgetProvider() {
@@ -42,9 +41,7 @@ class BarcodeWidgetProvider : AppWidgetProvider() {
 
         fun update(context: Context, manager: AppWidgetManager, appWidgetId: Int) {
             val views = RemoteViews(context.packageName, R.layout.widget_barcode)
-            val settings = context.getSharedPreferences(SettingsRepository.FILE_NAME, Context.MODE_PRIVATE)
-            val themeIndex = settings.getInt(SettingsRepository.KEY_THEME, 0).coerceIn(0, 5)
-            views.setInt(R.id.widget_root, "setBackgroundResource", widgetBackground(themeIndex))
+            views.setInt(R.id.widget_root, "setBackgroundResource", R.drawable.widget_background)
 
             val barcodeId = WidgetStore.get(context, appWidgetId)
             val item = barcodeId?.let { BarcodeRepository(context).getById(it) }
@@ -84,15 +81,6 @@ class BarcodeWidgetProvider : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
             manager.updateAppWidget(appWidgetId, views)
-        }
-
-        private fun widgetBackground(themeIndex: Int): Int = when (themeIndex) {
-            1 -> R.drawable.widget_background_mint
-            2 -> R.drawable.widget_background_orange
-            3 -> R.drawable.widget_background_coral
-            4 -> R.drawable.widget_background_grape
-            5 -> R.drawable.widget_background_honey
-            else -> R.drawable.widget_background
         }
     }
 }

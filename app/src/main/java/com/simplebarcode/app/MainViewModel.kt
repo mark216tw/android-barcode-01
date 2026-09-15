@@ -53,14 +53,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         barcodeRepository.toggleFavorite(id)
     }
 
-    fun setTheme(index: Int) {
-        settingsRepository.setTheme(index)
-        refreshWidgets()
+    fun setTheme(index: Int, hue: Float) {
+        settingsRepository.setTheme(index, hue)
+    }
+
+    fun setCustomHue(hue: Float) {
+        settingsRepository.setCustomHue(hue)
+    }
+
+    fun useCustomTheme() {
+        settingsRepository.useCustomTheme()
     }
 
     fun setDarkMode(mode: DarkMode) {
         settingsRepository.setDarkMode(mode)
-        refreshWidgets()
     }
 
     private fun refreshWidgets() {

@@ -36,6 +36,7 @@ import com.simplebarcode.app.data.BarcodeItem
 import com.simplebarcode.app.data.BarcodeRepository
 import com.simplebarcode.app.data.SettingsRepository
 import com.simplebarcode.app.ui.theme.SimpleBarcodeTheme
+import com.simplebarcode.app.ui.theme.SyncSystemBars
 
 class WidgetConfigActivity : ComponentActivity() {
     private var appWidgetId: Int = AppWidgetManager.INVALID_APPWIDGET_ID
@@ -57,7 +58,13 @@ class WidgetConfigActivity : ComponentActivity() {
         setContent {
             val items by repository.items.collectAsState()
             val settings by settingsRepository.settings.collectAsState()
-            SimpleBarcodeTheme(settings.themeIndex, settings.darkMode) {
+            SimpleBarcodeTheme(
+                settings.themeIndex,
+                settings.customHue,
+                settings.useCustomTheme,
+                settings.darkMode,
+            ) {
+                SyncSystemBars()
                 WidgetConfigScreen(
                     items = items,
                     onSelect = ::complete,

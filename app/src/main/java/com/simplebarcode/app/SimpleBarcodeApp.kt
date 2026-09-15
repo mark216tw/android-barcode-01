@@ -12,7 +12,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -70,6 +69,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -77,7 +78,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -88,16 +88,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.simplebarcode.app.barcode.BarcodeGenerator
 import com.simplebarcode.app.barcode.shareBarcode
@@ -105,7 +103,9 @@ import com.simplebarcode.app.data.BarcodeItem
 import com.simplebarcode.app.data.BarcodeType
 import com.simplebarcode.app.data.DarkMode
 import com.simplebarcode.app.ui.theme.SimpleBarcodeTheme
+import com.simplebarcode.app.ui.theme.SyncSystemBars
 import com.simplebarcode.app.ui.theme.ThemeOptions
+import com.simplebarcode.app.ui.theme.customThemeOption
 import com.simplebarcode.app.widget.BarcodeWidgetProvider
 
 private sealed interface AppScreen {
@@ -131,8 +131,13 @@ fun SimpleBarcodeApp(
         if (detail != null && allItems.none { it.id == detail.id }) screen = AppScreen.Home
     }
 
-    SimpleBarcodeTheme(settings.themeIndex, settings.darkMode) { isDark ->
-        SyncSystemBars(isDark)
+    SimpleBarcodeTheme(
+        settings.themeIndex,
+        settings.customHue,
+        settings.useCustomTheme,
+        settings.darkMode,
+    ) {
+        SyncSystemBars()
 
         BackHandler(enabled = screen != AppScreen.Home) { screen = AppScreen.Home }
 
@@ -165,29 +170,15 @@ fun SimpleBarcodeApp(
             }
             AppScreen.Settings -> SettingsScreen(
                 themeIndex = settings.themeIndex,
+                customHue = settings.customHue,
+                useCustomTheme = settings.useCustomTheme,
                 darkMode = settings.darkMode,
                 onThemeChange = viewModel::setTheme,
+                onCustomHueChange = viewModel::setCustomHue,
+                onUseCustomTheme = viewModel::useCustomTheme,
                 onDarkModeChange = viewModel::setDarkMode,
                 onBack = { screen = AppScreen.Home },
             )
-        }
-    }
-}
-
-@Suppress("DEPRECATION")
-@Composable
-private fun SyncSystemBars(isDark: Boolean) {
-    val view = LocalView.current
-    val surface = MaterialTheme.colorScheme.surface
-    if (!view.isInEditMode) {
-        SideEffect {
-            val window = (view.context as Activity).window
-            window.statusBarColor = surface.toArgb()
-            window.navigationBarColor = surface.toArgb()
-            WindowCompat.getInsetsController(window, view).apply {
-                isAppearanceLightStatusBars = !isDark
-                isAppearanceLightNavigationBars = !isDark
-            }
         }
     }
 }
@@ -604,8 +595,12 @@ private fun KeepScreenBright() {
 @Composable
 private fun SettingsScreen(
     themeIndex: Int,
+    customHue: Float,
+    useCustomTheme: Boolean,
     darkMode: DarkMode,
-    onThemeChange: (Int) -> Unit,
+    onThemeChange: (Int, Float) -> Unit,
+    onCustomHueChange: (Float) -> Unit,
+    onUseCustomTheme: () -> Unit,
     onDarkModeChange: (DarkMode) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -620,61 +615,112 @@ private fun SettingsScreen(
         },
     ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(20.dp),
+            modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 10.dp),
         ) {
-            Text("主題色彩", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
-            Text("點一下立即套用", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(18.dp))
-            ThemeOptions.chunked(3).forEachIndexed { rowIndex, rowItems ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    rowItems.forEachIndexed { columnIndex, option ->
-                        val index = rowIndex * 3 + columnIndex
-                        Column(
-                            modifier = Modifier.width(92.dp).clip(RoundedCornerShape(16.dp)).clickable { onThemeChange(index) }.padding(8.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(52.dp)
-                                    .clip(CircleShape)
-                                    .background(option.primary)
-                                    .then(
-                                        if (themeIndex == index) Modifier.border(4.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
-                                        else Modifier,
-                                    ),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                if (themeIndex == index) Text("✓", color = Color.White, fontWeight = FontWeight.Black, fontSize = 22.sp)
-                            }
-                            Spacer(Modifier.height(6.dp))
-                            Text(option.name, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-                if (rowIndex == 0) Spacer(Modifier.height(8.dp))
-            }
-
-            HorizontalDivider(Modifier.padding(vertical = 24.dp))
-            Text("外觀模式", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
-            Spacer(Modifier.height(8.dp))
-            DarkMode.entries.forEach { mode ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable { onDarkModeChange(mode) }.padding(vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    RadioButton(selected = darkMode == mode, onClick = { onDarkModeChange(mode) })
-                    Column {
-                        Text(mode.displayName, fontWeight = FontWeight.Bold)
-                        if (mode == DarkMode.SYSTEM) {
-                            Text("隨手機的深色模式自動切換", style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
+            Text("顯示模式", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black)
+            Spacer(Modifier.height(6.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                DarkMode.entries.forEach { mode ->
+                    FilterChip(
+                        selected = darkMode == mode,
+                        onClick = { onDarkModeChange(mode) },
+                        label = { Text(mode.displayName) },
+                        modifier = Modifier.weight(1f),
+                        leadingIcon = if (darkMode == mode) {
+                            { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                        } else null,
+                    )
                 }
             }
 
-            HorizontalDivider(Modifier.padding(vertical = 24.dp))
-            Text("關於", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
+            HorizontalDivider(Modifier.padding(vertical = 14.dp))
+            Text("主題色彩", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black)
+            Text("選擇色彩後立即套用", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(10.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                ThemeOptions.forEachIndexed { index, option ->
+                    Box(
+                        modifier = Modifier
+                            .size(46.dp)
+                            .clip(CircleShape)
+                            .background(option.primary)
+                            .then(
+                                if (!useCustomTheme && themeIndex == index) Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                                else Modifier,
+                            )
+                            .clickable { onThemeChange(index, option.hue) },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (!useCustomTheme && themeIndex == index) {
+                            Icon(Icons.Default.Check, contentDescription = "已選擇${option.name}", tint = Color.White)
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(14.dp))
+            Text("自訂色彩", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                val customColor = customThemeOption(customHue).primary
+                Box(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .background(customColor)
+                        .then(
+                            if (useCustomTheme) Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                            else Modifier,
+                        )
+                        .clickable(onClick = onUseCustomTheme),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (useCustomTheme) Icon(Icons.Default.Check, contentDescription = "已選擇自訂色彩", tint = Color.White)
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(10.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        Color.Red,
+                                        Color.Yellow,
+                                        Color.Green,
+                                        Color.Cyan,
+                                        Color.Blue,
+                                        Color.Magenta,
+                                        Color.Red,
+                                    ),
+                                ),
+                            ),
+                    )
+                    Slider(
+                        value = customHue,
+                        onValueChange = onCustomHueChange,
+                        valueRange = 0f..360f,
+                        colors = SliderDefaults.colors(
+                            thumbColor = customColor,
+                            activeTrackColor = Color.Transparent,
+                            inactiveTrackColor = Color.Transparent,
+                        ),
+                    )
+                }
+            }
+
+            HorizontalDivider(Modifier.padding(vertical = 14.dp))
+            Text("關於", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black)
+            Spacer(Modifier.height(6.dp))
             Text("簡單條碼 1.0.0", fontWeight = FontWeight.Bold)
             Text("條碼只儲存在這部手機，不會上傳到網路。", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.navigationBarsPadding())

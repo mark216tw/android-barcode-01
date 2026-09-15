@@ -27,6 +27,12 @@ android {
                 "proguard-rules.pro",
             )
         }
+        create("prerelease") {
+            initWith(getByName("release"))
+            versionNameSuffix = "-prerelease"
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+        }
     }
 
     compileOptions {

@@ -11,7 +11,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
-            SimpleBarcodeApp(initialBarcodeId = intent.getLongExtra(EXTRA_BARCODE_ID, -1L).takeIf { it > 0 })
+            SimpleBarcodeApp(
+                initialBarcodeId = intent.getLongExtra(EXTRA_BARCODE_ID, -1L).takeIf { it > 0 },
+                onExit = { moveTaskToBack(true) },
+            )
         }
     }
 

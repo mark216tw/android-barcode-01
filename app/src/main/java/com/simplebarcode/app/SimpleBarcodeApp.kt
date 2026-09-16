@@ -9,6 +9,7 @@ import android.provider.Settings
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -33,16 +34,21 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ExitToApp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.Settings
@@ -75,6 +81,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -90,8 +97,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -118,6 +127,7 @@ private sealed interface AppScreen {
 @Composable
 fun SimpleBarcodeApp(
     initialBarcodeId: Long?,
+    onExit: () -> Unit,
     viewModel: MainViewModel = viewModel(),
 ) {
     val allItems by viewModel.items.collectAsState()
@@ -148,6 +158,7 @@ fun SimpleBarcodeApp(
                 onOpen = { screen = AppScreen.Detail(it) },
                 onFavorite = viewModel::toggleFavorite,
                 onSettings = { screen = AppScreen.Settings },
+                onExit = onExit,
             )
             is AppScreen.Edit -> EditBarcodeScreen(
                 existing = current.id?.let(viewModel::getItem),
@@ -191,6 +202,7 @@ private fun HomeScreen(
     onOpen: (Long) -> Unit,
     onFavorite: (Long) -> Unit,
     onSettings: () -> Unit,
+    onExit: () -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     val filtered = remember(items, query) {
@@ -202,9 +214,9 @@ private fun HomeScreen(
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
+            TopAppBar(
                 title = {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(horizontalAlignment = Alignment.Start) {
                         Text("簡單條碼", fontWeight = FontWeight.Black)
                         Text("常用條碼，一點就開", style = MaterialTheme.typography.labelSmall)
                     }
@@ -212,6 +224,9 @@ private fun HomeScreen(
                 actions = {
                     IconButton(onClick = onSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "設定")
+                    }
+                    IconButton(onClick = onExit) {
+                        Icon(Icons.AutoMirrored.Rounded.ExitToApp, contentDescription = "切換到背景")
                     }
                 },
             )
@@ -615,114 +630,237 @@ private fun SettingsScreen(
         },
     ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 10.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 10.dp),
         ) {
-            Text("顯示模式", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black)
-            Spacer(Modifier.height(6.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                DarkMode.entries.forEach { mode ->
-                    FilterChip(
-                        selected = darkMode == mode,
-                        onClick = { onDarkModeChange(mode) },
-                        label = { Text(mode.displayName) },
-                        modifier = Modifier.weight(1f),
-                        leadingIcon = if (darkMode == mode) {
-                            { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                        } else null,
-                    )
-                }
-            }
-
-            HorizontalDivider(Modifier.padding(vertical = 14.dp))
-            Text("主題色彩", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black)
-            Text("選擇色彩後立即套用", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(10.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                ThemeOptions.forEachIndexed { index, option ->
-                    Box(
-                        modifier = Modifier
-                            .size(46.dp)
-                            .clip(CircleShape)
-                            .background(option.primary)
-                            .then(
-                                if (!useCustomTheme && themeIndex == index) Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
-                                else Modifier,
-                            )
-                            .clickable { onThemeChange(index, option.hue) },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        if (!useCustomTheme && themeIndex == index) {
-                            Icon(Icons.Default.Check, contentDescription = "已選擇${option.name}", tint = Color.White)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.surfaceContainer,
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Settings,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(28.dp),
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text("顯示模式", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black)
+                    }
+                    Spacer(Modifier.height(14.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        DarkMode.entries.forEach { mode ->
+                            val selected = darkMode == mode
+                            val icon = when (mode) {
+                                DarkMode.SYSTEM -> Icons.Default.Settings
+                                DarkMode.LIGHT -> Icons.Default.LightMode
+                                DarkMode.DARK -> Icons.Default.DarkMode
+                            }
+                            Surface(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(96.dp)
+                                    .selectable(
+                                        selected = selected,
+                                        role = Role.RadioButton,
+                                        onClick = { onDarkModeChange(mode) },
+                                    ),
+                                shape = RoundedCornerShape(22.dp),
+                                color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                                border = BorderStroke(
+                                    if (selected) 2.dp else 1.dp,
+                                    if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                                ),
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 10.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center,
+                                ) {
+                                    Icon(
+                                        icon,
+                                        contentDescription = null,
+                                        tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(36.dp),
+                                    )
+                                    Spacer(Modifier.height(8.dp))
+                                    Text(
+                                        mode.displayName,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        maxLines = 2,
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             }
 
-            Spacer(Modifier.height(14.dp))
-            Text("自訂色彩", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-            Row(
+            Spacer(Modifier.height(16.dp))
+
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.surfaceContainer,
             ) {
-                val customColor = customThemeOption(customHue).primary
-                Box(
-                    modifier = Modifier
-                        .size(46.dp)
-                        .clip(CircleShape)
-                        .background(customColor)
-                        .then(
-                            if (useCustomTheme) Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
-                            else Modifier,
+                Column(Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Palette,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(28.dp),
                         )
-                        .clickable(onClick = onUseCustomTheme),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (useCustomTheme) Icon(Icons.Default.Check, contentDescription = "已選擇自訂色彩", tint = Color.White)
-                }
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(10.dp)
-                            .clip(CircleShape)
-                            .background(
-                                Brush.horizontalGradient(
-                                    listOf(
-                                        Color.Red,
-                                        Color.Yellow,
-                                        Color.Green,
-                                        Color.Cyan,
-                                        Color.Blue,
-                                        Color.Magenta,
-                                        Color.Red,
+                        Spacer(Modifier.width(10.dp))
+                        Text("主題色彩", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black)
+                    }
+                    Spacer(Modifier.height(14.dp))
+
+                    ThemeOptions.chunked(3).forEachIndexed { rowIndex, options ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            options.forEach { option ->
+                                val index = ThemeOptions.indexOf(option)
+                                val selected = !useCustomTheme && themeIndex == index
+                                Surface(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(96.dp)
+                                        .selectable(
+                                            selected = selected,
+                                            role = Role.RadioButton,
+                                            onClick = { onThemeChange(index, option.hue) },
+                                        ),
+                                    shape = RoundedCornerShape(22.dp),
+                                    color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                                    border = BorderStroke(
+                                        if (selected) 2.dp else 1.dp,
+                                        if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                                     ),
-                                ),
-                            ),
-                    )
-                    Slider(
-                        value = customHue,
-                        onValueChange = onCustomHueChange,
-                        valueRange = 0f..360f,
-                        colors = SliderDefaults.colors(
-                            thumbColor = customColor,
-                            activeTrackColor = Color.Transparent,
-                            inactiveTrackColor = Color.Transparent,
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center,
+                                    ) {
+                                        Box(
+                                            modifier = Modifier.size(32.dp).clip(CircleShape).background(option.primary),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            if (selected) {
+                                                Icon(
+                                                    Icons.Default.Check,
+                                                    contentDescription = null,
+                                                    tint = Color.White,
+                                                )
+                                            }
+                                        }
+                                        Spacer(Modifier.height(8.dp))
+                                        Text(option.name, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+                                    }
+                                }
+                            }
+                        }
+                        if (rowIndex == 0) Spacer(Modifier.height(10.dp))
+                    }
+
+                    Spacer(Modifier.height(14.dp))
+                    val customColor = customThemeOption(customHue).primary
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = onUseCustomTheme),
+                        shape = RoundedCornerShape(22.dp),
+                        color = if (useCustomTheme) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(
+                            if (useCustomTheme) 2.dp else 1.dp,
+                            if (useCustomTheme) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                         ),
-                    )
+                    ) {
+                        Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+                            Text("自訂色彩", style = MaterialTheme.typography.titleMedium)
+                            Spacer(Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                Box(
+                                    modifier = Modifier.size(32.dp).clip(CircleShape).background(customColor),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    if (useCustomTheme) {
+                                        Icon(
+                                            Icons.Default.Check,
+                                            contentDescription = "已選擇自訂色彩",
+                                            tint = if (customColor.luminance() > 0.48f) Color(0xFF17191F) else Color.White,
+                                        )
+                                    }
+                                }
+                                Box(
+                                    modifier = Modifier.weight(1f).height(48.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Box(
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .height(10.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                Brush.horizontalGradient(
+                                                    listOf(
+                                                        Color.Red,
+                                                        Color.Yellow,
+                                                        Color.Green,
+                                                        Color.Cyan,
+                                                        Color.Blue,
+                                                        Color.Magenta,
+                                                        Color.Red,
+                                                    ),
+                                                ),
+                                            ),
+                                    )
+                                    Slider(
+                                        value = customHue,
+                                        onValueChange = onCustomHueChange,
+                                        valueRange = 0f..360f,
+                                        colors = SliderDefaults.colors(
+                                            thumbColor = customColor,
+                                            activeTrackColor = Color.Transparent,
+                                            inactiveTrackColor = Color.Transparent,
+                                        ),
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
-            HorizontalDivider(Modifier.padding(vertical = 14.dp))
-            Text("關於", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black)
-            Spacer(Modifier.height(6.dp))
-            Text("簡單條碼 1.0.0", fontWeight = FontWeight.Bold)
-            Text("條碼只儲存在這部手機，不會上傳到網路。", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(16.dp))
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.surfaceContainer,
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text(
+                        "條碼只儲存在這部手機，不會上傳到網路。",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text("關於", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black)
+                    Spacer(Modifier.height(8.dp))
+                    Text("版本 ${BuildConfig.VERSION_NAME}")
+                    Text("Build ${BuildConfig.BUILD_ID}")
+                }
+            }
             Spacer(Modifier.navigationBarsPadding())
         }
     }

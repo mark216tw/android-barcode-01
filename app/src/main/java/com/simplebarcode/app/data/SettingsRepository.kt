@@ -14,7 +14,7 @@ enum class DarkMode(val displayName: String) {
 
 data class AppSettings(
     val themeIndex: Int = 0,
-    val customHue: Float = 216f,
+    val customHue: Float = 46f,
     val useCustomTheme: Boolean = false,
     val darkMode: DarkMode = DarkMode.SYSTEM,
 )
@@ -65,7 +65,7 @@ class SettingsRepository(context: Context) {
 
     private fun load(): AppSettings = AppSettings(
         themeIndex = preferences.getInt(KEY_THEME, 0).coerceIn(0, 5),
-        customHue = preferences.getFloat(KEY_CUSTOM_HUE, 216f).coerceIn(0f, 360f),
+        customHue = preferences.getFloat(KEY_CUSTOM_HUE, 46f).coerceIn(0f, 360f),
         useCustomTheme = preferences.getBoolean(KEY_USE_CUSTOM_THEME, false),
         darkMode = runCatching {
             DarkMode.valueOf(preferences.getString(KEY_DARK_MODE, DarkMode.SYSTEM.name).orEmpty())

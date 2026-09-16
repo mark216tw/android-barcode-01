@@ -18,12 +18,20 @@ data class ThemeOption(
 )
 
 val ThemeOptions = listOf(
-    ThemeOption("晴空藍", 216f, Color(0xFF3478F6), Color(0xFFADC6FF), Color(0xFFD9E5FF)),
-    ThemeOption("薄荷綠", 168f, Color(0xFF168873), Color(0xFF75DBC2), Color(0xFFB6F2E2)),
-    ThemeOption("柳橙橘", 20f, Color(0xFFE76620), Color(0xFFFFB68E), Color(0xFFFFDBCA)),
-    ThemeOption("珊瑚紅", 353f, Color(0xFFDD4053), Color(0xFFFFB2B9), Color(0xFFFFDADC)),
-    ThemeOption("葡萄紫", 264f, Color(0xFF7652B5), Color(0xFFD0BCFF), Color(0xFFE9DDFF)),
-    ThemeOption("蜂蜜黃", 47f, Color(0xFF8B6D00), Color(0xFFEBCB58), Color(0xFFFFEFAE)),
+    themeOption("暖陽黃", 46f, Color(0xFF765B00)),
+    themeOption("珊瑚紅", 352f, Color(0xFFA63C4A)),
+    themeOption("活力橘", 28f, Color(0xFF974700)),
+    themeOption("青草綠", 101f, Color(0xFF386A20)),
+    themeOption("天空藍", 196f, Color(0xFF00658B)),
+    themeOption("葡萄紫", 248f, Color(0xFF6555C7)),
+)
+
+private fun themeOption(name: String, hue: Float, primary: Color) = ThemeOption(
+    name = name,
+    hue = hue,
+    primary = primary,
+    darkPrimary = Color.hsv(hue, 0.48f, 0.96f),
+    container = Color.hsv(hue, 0.22f, 1f),
 )
 
 fun customThemeOption(hue: Float): ThemeOption {

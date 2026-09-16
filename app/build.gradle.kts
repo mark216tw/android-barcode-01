@@ -1,8 +1,15 @@
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 }
+
+val buildId = LocalDateTime.now().format(
+    DateTimeFormatter.ofPattern("yyyyMMdd.HHmmss.SSS"),
+)
 
 android {
     namespace = "com.simplebarcode.app"
@@ -12,8 +19,9 @@ android {
         applicationId = "com.simplebarcode.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.0.1"
+        buildConfigField("String", "BUILD_ID", "\"$buildId\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
